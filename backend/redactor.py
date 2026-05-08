@@ -6,7 +6,8 @@
 # https://huggingface.co/openai/privacy-filter
 
 import pymupdf
-from .ocr_helper import page_needs_ocr, extract_text_with_coords
+
+from .ocr_helper import extract_text_with_coords, page_needs_ocr
 from .pii_detector import detect_pii
 from .schemas import RedactSettings
 
@@ -14,7 +15,7 @@ from .schemas import RedactSettings
 def _format_replacement(entity_group: str, style: str) -> str:
     if style == "label":
         return f"[{entity_group.upper()}]"
-    return "████████"
+    return "********"
 
 
 def detect_pii_rects(
@@ -55,16 +56,17 @@ def detect_pii_rects(
 
         all_text_parts.append(f"--- Página {page_num + 1} ---\n{full_text}\n")
 
-        rects = _find_redact_rects(entities, spans)
         for rect, entity in _match_rects_entities(entities, spans):
-            all_rects.append({
-                "page": page_num,
-                "x": rect.x0,
-                "y": rect.y0,
-                "width": rect.width,
-                "height": rect.height,
-                "label": entity["entity_group"],
-            })
+            all_rects.append(
+                {
+                    "page": page_num,
+                    "x": rect.x0,
+                    "y": rect.y0,
+                    "width": rect.width,
+                    "height": rect.height,
+                    "label": entity["entity_group"],
+                }
+            )
 
     doc.close()
     return all_rects, "\n".join(all_text_parts), total_pages, total_ocr, total_pii
@@ -94,7 +96,9 @@ def apply_rects_to_pdf(
         page_rects = pages_rects.get(page_num, [])
         needs_ocr = page_needs_ocr(page)
 
-        censored = _censor_text_from_page(page, page_rects, settings.ocr_language, needs_ocr)
+        censored = _censor_text_from_page(
+            page, page_rects, settings.ocr_language, needs_ocr
+        )
         all_text_parts.append(f"--- Página {page_num + 1} ---\n{censored}\n")
 
         if page_rects:
@@ -125,12 +129,10 @@ def _censor_text_from_page(
     else:
         tp = page.get_textpage()
 
-    kwargs = {"textpage": tp, "flags": pymupdf.TEXTFLAGS_TEXT}
-    data = page.get_text("dict", **kwargs)
-    blocks = data.get("blocks", [])
-
+    data = page.get_text("dict", textpage=tp, flags=pymupdf.TEXTFLAGS_TEXT)
     output_lines = []
-    for block in blocks:
+
+    for block in data.get("blocks", []):
         if block.get("type") != 0:
             continue
         for line in block.get("lines", []):
@@ -165,7 +167,3 @@ def _match_rects_entities(
                 continue
             pairs.append((pymupdf.Rect(span["bbox"]), entity))
     return pairs
-
-
-def _find_redact_rects(entities: list[dict], spans: list[dict]) -> list[pymupdf.Rect]:
-    return [pair[0] for pair in _match_rects_entities(entities, spans)]

@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 
 interface Props {
   onFileSelected: (file: File) => void;
@@ -36,53 +36,61 @@ export default function Uploader({ onFileSelected }: Props) {
   );
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={onDrop}
-        onClick={() => inputRef.current?.click()}
-        className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition ${
-          dragOver
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 hover:border-gray-400"
-        }`}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".pdf,application/pdf"
-          onChange={onFileChange}
-          className="hidden"
-        />
-        <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-        </svg>
-        <p className="text-gray-600 font-medium">
-          Arrastra un PDF aquí o haz clic para seleccionar
-        </p>
-        <p className="text-sm text-gray-400 mt-1">Máximo 100 MB</p>
+    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 px-5 py-4">
+        <h2 className="text-sm font-semibold text-slate-950">Documento</h2>
       </div>
 
-      {file && (
-        <div className="mt-4 flex items-center justify-between bg-gray-50 rounded-lg p-4">
-          <div>
-            <p className="font-medium text-gray-800">{file.name}</p>
-            <p className="text-sm text-gray-500">
-              {(file.size / 1024 / 1024).toFixed(2)} MB
-            </p>
+      <div className="p-5">
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+          onClick={() => inputRef.current?.click()}
+          className={`flex min-h-[260px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-8 text-center transition ${
+            dragOver
+              ? "border-blue-500 bg-blue-50"
+              : "border-slate-300 bg-slate-50 hover:border-slate-400 hover:bg-white"
+          }`}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            onChange={onFileChange}
+            className="hidden"
+          />
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm ring-1 ring-slate-200">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 16V4m0 0L8 8m4-4l4 4M5 20h14" />
+            </svg>
           </div>
-          <button
-            onClick={() => onFileSelected(file)}
-            className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
-          >
-            Redactar
-          </button>
+          <p className="text-sm font-semibold text-slate-800">
+            Arrastra un PDF o haz clic para seleccionar
+          </p>
+          <p className="mt-1 text-xs font-medium text-slate-500">Máximo 100 MB</p>
         </div>
-      )}
-    </div>
+
+        {file && (
+          <div className="mt-4 flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-900">{file.name}</p>
+              <p className="mt-0.5 text-xs font-medium text-slate-500">
+                {(file.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+            </div>
+            <button
+              onClick={() => onFileSelected(file)}
+              className="shrink-0 rounded-lg bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            >
+              Redactar
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

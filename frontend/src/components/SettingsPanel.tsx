@@ -20,20 +20,27 @@ const ALL_CATEGORIES = [
 const LANGUAGE_PRESETS = ["spa", "eng", "spa+eng", "fra"];
 
 export default function SettingsPanel({ settings, onChange }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   const update = (partial: Partial<RedactSettings>) =>
     onChange({ ...settings, ...partial });
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full px-6 py-4 flex items-center justify-between text-left"
+        className="flex w-full items-center justify-between border-b border-slate-200 px-5 py-4 text-left"
       >
-        <span className="font-medium text-gray-800">Configuración</span>
+        <div>
+          <h2 className="text-sm font-semibold text-slate-950">Configuración</h2>
+          <p className="mt-0.5 text-xs font-medium text-slate-500">
+            OCR, confianza y categorías
+          </p>
+        </div>
         <svg
-          className={`h-5 w-5 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`h-5 w-5 text-slate-400 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -43,11 +50,16 @@ export default function SettingsPanel({ settings, onChange }: Props) {
       </button>
 
       {open && (
-        <div className="px-6 pb-6 space-y-5 border-t border-gray-100 pt-4">
+        <div className="space-y-6 p-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Umbral de confianza: {settings.confidence_threshold.toFixed(2)}
-            </label>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-sm font-semibold text-slate-700">
+                Confianza
+              </label>
+              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                {settings.confidence_threshold.toFixed(2)}
+              </span>
+            </div>
             <input
               type="range"
               min="0"
@@ -57,27 +69,27 @@ export default function SettingsPanel({ settings, onChange }: Props) {
               onChange={(e) =>
                 update({ confidence_threshold: parseFloat(e.target.value) })
               }
-              className="w-full"
+              className="w-full accent-slate-900"
             />
-            <div className="flex justify-between text-xs text-gray-400">
-              <span>Más sensible (0.0)</span>
-              <span>Más preciso (1.0)</span>
+            <div className="mt-1 flex justify-between text-[11px] font-medium text-slate-400">
+              <span>Más sensible</span>
+              <span>Más preciso</span>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
               Idioma OCR
             </label>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex flex-wrap gap-2">
               {LANGUAGE_PRESETS.map((lang) => (
                 <button
                   key={lang}
                   onClick={() => update({ ocr_language: lang })}
-                  className={`px-3 py-1 rounded-full text-sm border transition ${
+                  className={`rounded-full border px-3 py-1 text-sm font-semibold transition ${
                     settings.ocr_language === lang
-                      ? "bg-blue-100 border-blue-300 text-blue-800"
-                      : "border-gray-200 text-gray-600 hover:border-gray-300"
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                   }`}
                 >
                   {lang}
@@ -87,19 +99,23 @@ export default function SettingsPanel({ settings, onChange }: Props) {
                 type="text"
                 value={settings.ocr_language}
                 onChange={(e) => update({ ocr_language: e.target.value })}
-                placeholder="Código Tesseract"
-                className="px-3 py-1 rounded-lg border border-gray-200 text-sm w-36"
+                placeholder="Código"
+                className="w-28 rounded-lg border border-slate-200 px-3 py-1 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Categorías PII a censurar
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Categorías
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-2">
               {ALL_CATEGORIES.map((cat) => (
-                <label key={cat.id} className="flex items-center gap-2 text-sm text-gray-700">
+                <label
+                  key={cat.id}
+                  className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700"
+                >
+                  {cat.label}
                   <input
                     type="checkbox"
                     checked={settings.categories.includes(cat.id)}
@@ -109,39 +125,42 @@ export default function SettingsPanel({ settings, onChange }: Props) {
                         : settings.categories.filter((c) => c !== cat.id);
                       update({ categories: cats });
                     }}
-                    className="rounded border-gray-300"
+                    className="h-4 w-4 rounded border-slate-300 accent-slate-900"
                   />
-                  {cat.label}
                 </label>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estilo de reemplazo
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Reemplazo TXT
             </label>
-            <div className="flex gap-3">
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="radio"
-                  checked={settings.replacement_style === "label"}
-                  onChange={() => update({ replacement_style: "label" })}
-                />
-                Etiqueta <code className="text-xs bg-gray-100 px-1 rounded">[PRIVATE_PERSON]</code>
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="radio"
-                  checked={settings.replacement_style === "block"}
-                  onChange={() => update({ replacement_style: "block" })}
-                />
-                Bloque <span className="font-mono">████████</span>
-              </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => update({ replacement_style: "label" })}
+                className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                  settings.replacement_style === "label"
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                Etiqueta
+              </button>
+              <button
+                onClick={() => update({ replacement_style: "block" })}
+                className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                  settings.replacement_style === "block"
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                ***
+              </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

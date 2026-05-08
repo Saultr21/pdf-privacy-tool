@@ -1,10 +1,12 @@
 export default function ProcessingStatus() {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center">
-      <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mb-4" />
-      <p className="text-gray-700 font-medium text-lg">Procesando...</p>
-      <p className="text-sm text-gray-500 mt-2">
-        La primera vez, el modelo se descarga (~3 GB). Puede tardar varios minutos.
+    <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+      <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-200 border-t-blue-700" />
+      </div>
+      <p className="text-base font-semibold text-slate-900">Procesando documento</p>
+      <p className="mt-2 text-sm font-medium leading-6 text-slate-500">
+        El primer análisis puede tardar si el modelo todavía no está cargado.
       </p>
     </div>
   );

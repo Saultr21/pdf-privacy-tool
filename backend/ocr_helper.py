@@ -1,6 +1,7 @@
 import os
-import sys
 import shutil
+import sys
+
 import pymupdf
 
 MIN_TEXT_CHARS = 50
@@ -61,11 +62,13 @@ def extract_text_with_coords(
                 full_text += t
                 char_end = len(full_text)
                 full_text += " "
-                spans.append({
-                    "text": t,
-                    "bbox": span["bbox"],
-                    "char_start": char_start,
-                    "char_end": char_end,
-                })
+                spans.append(
+                    {
+                        "text": t,
+                        "bbox": span["bbox"],
+                        "char_start": char_start,
+                        "char_end": char_end,
+                    }
+                )
 
     return full_text, spans

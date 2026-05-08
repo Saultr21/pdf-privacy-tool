@@ -1,17 +1,16 @@
-import { useState, useCallback } from "react";
-import type { RedactRect, RedactSettings, ApplyResponse } from "./api";
+import { useCallback, useState } from "react";
+import type { ApplyResponse, RedactRect, RedactSettings } from "./api";
 import {
   DEFAULT_SETTINGS,
-  detectPii,
   applyRedactions,
+  detectPii,
   fileToBase64,
   makeRectId,
 } from "./api";
-import Uploader from "./components/Uploader";
-import ProcessingStatus from "./components/ProcessingStatus";
 import DualViewer from "./components/DualViewer";
-import DownloadPanel from "./components/DownloadPanel";
+import ProcessingStatus from "./components/ProcessingStatus";
 import SettingsPanel from "./components/SettingsPanel";
+import Uploader from "./components/Uploader";
 
 type AppState = "idle" | "detecting" | "editing" | "applying" | "applied" | "error";
 
@@ -46,7 +45,6 @@ export default function App() {
         ocr: res.ocr_pages,
         pii: res.pii_count,
       });
-      // Auto-apply initial redactions
       setState("applying");
       const applied = await applyRedactions(b64, clientRects, settings);
       setAppliedResult(applied);
@@ -70,16 +68,10 @@ export default function App() {
     }
   }, [originalBase64, rects, settings]);
 
-  const handleAddRect = useCallback(
-    (rect: Omit<RedactRect, "id" | "label">) => {
-      setRects((prev) => [
-        ...prev,
-        { ...rect, label: "manual", id: makeRectId() },
-      ]);
-      setDirty(true);
-    },
-    []
-  );
+  const handleAddRect = useCallback((rect: Omit<RedactRect, "id" | "label">) => {
+    setRects((prev) => [...prev, { ...rect, label: "manual", id: makeRectId() }]);
+    setDirty(true);
+  }, []);
 
   const handleRemoveRect = useCallback((id: string) => {
     setRects((prev) => prev.filter((r) => r.id !== id));
@@ -99,27 +91,36 @@ export default function App() {
     state === "editing" || state === "applied" || state === "applying";
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-200 shadow-sm shrink-0">
-        <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">PII Redactor</h1>
-            <p className="text-xs text-gray-500">
-              100% local — nada sale de tu dispositivo
-            </p>
+    <div className="h-screen overflow-hidden bg-slate-100 text-slate-900 flex flex-col">
+      <header className="shrink-0 border-b border-slate-200 bg-white shadow-sm">
+        <div className="mx-auto flex h-16 max-w-screen-2xl items-center justify-between gap-4 px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-white shadow-sm">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h16v14H4zM8 9h8M8 13h5" />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-semibold tracking-tight text-slate-950">
+                PII Redactor
+              </h1>
+              <p className="text-xs font-medium text-slate-500">
+                Procesamiento local
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex shrink-0 items-center gap-2">
             {isEditing && (
               <>
-                {/* Status indicator */}
                 {state === "applying" && (
-                  <span className="flex items-center gap-1.5 text-sm text-blue-600">
-                    <span className="inline-block h-3 w-3 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
-                    Aplicando...
+                  <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700">
+                    <span className="inline-block h-3 w-3 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+                    Aplicando
                   </span>
                 )}
                 {state === "applied" && !dirty && (
-                  <span className="flex items-center gap-1.5 text-sm text-green-600">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
@@ -130,7 +131,7 @@ export default function App() {
                   <button
                     onClick={handleApply}
                     disabled={state === "applying"}
-                    className="px-4 py-1.5 text-sm bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+                    className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Aplicar cambios
                   </button>
@@ -140,7 +141,7 @@ export default function App() {
             {isEditing && (
               <button
                 onClick={handleReset}
-                className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
               >
                 Nuevo PDF
               </button>
@@ -149,27 +150,32 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {state === "idle" && (
-          <div className="max-w-3xl mx-auto w-full px-4 py-8 space-y-6">
+          <div className="mx-auto grid w-full max-w-5xl gap-6 px-6 py-8 lg:grid-cols-[360px_minmax(0,1fr)]">
             <SettingsPanel settings={settings} onChange={setSettings} />
             <Uploader onFileSelected={handleProcess} />
           </div>
         )}
 
         {state === "detecting" && (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center px-6">
             <ProcessingStatus />
           </div>
         )}
 
         {state === "error" && (
-          <div className="flex-1 flex items-center justify-center px-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-md">
-              <p className="text-red-700 font-medium mb-3">{error}</p>
+          <div className="flex-1 flex items-center justify-center px-6">
+            <div className="max-w-md rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm">
+              <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-600">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z" />
+                </svg>
+              </div>
+              <p className="mb-4 font-medium text-red-700">{error}</p>
               <button
                 onClick={handleReset}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700"
               >
                 Reintentar
               </button>
@@ -178,41 +184,16 @@ export default function App() {
         )}
 
         {isEditing && (
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-2">
-              <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                    {stats.pages} pág.
-                  </span>
-                  <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
-                    {stats.ocr} OCR
-                  </span>
-                  <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded-full">
-                    {rects.length} zonas
-                  </span>
-                  {dirty && (
-                    <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
-                      Sin aplicar
-                    </span>
-                  )}
-                </div>
-                {appliedResult && !dirty && (
-                  <DownloadPanel
-                    pdfBase64={appliedResult.pdf_base64}
-                    text={appliedResult.text}
-                    originalName={fileName}
-                  />
-                )}
-              </div>
-            </div>
-            <DualViewer
-              originalBase64={originalBase64}
-              rects={rects}
-              onAddRect={handleAddRect}
-              onRemoveRect={handleRemoveRect}
-            />
-          </div>
+          <DualViewer
+            originalBase64={originalBase64}
+            rects={rects}
+            stats={stats}
+            dirty={dirty}
+            appliedResult={appliedResult}
+            fileName={fileName}
+            onAddRect={handleAddRect}
+            onRemoveRect={handleRemoveRect}
+          />
         )}
       </main>
     </div>

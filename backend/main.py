@@ -2,13 +2,13 @@ import base64
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .redactor import detect_pii_rects, apply_rects_to_pdf
-from .schemas import RedactSettings
 from .ocr_helper import check_tesseract
+from .redactor import apply_rects_to_pdf, detect_pii_rects
+from .schemas import RedactSettings
 
 check_tesseract()
 
@@ -110,4 +110,5 @@ if frontend_dist.exists():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000)
