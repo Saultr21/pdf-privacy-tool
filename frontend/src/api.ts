@@ -47,23 +47,28 @@ export async function applyRedactions(
   return response.json();
 }
 
-export function downloadBlob(base64: string, filename: string, mimeType: string) {
-  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-  const blob = new Blob([bytes], { type: mimeType });
+function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, 0);
+}
+
+export function downloadBlob(base64: string, filename: string, mimeType: string) {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  triggerDownload(new Blob([bytes], { type: mimeType }), filename);
 }
 
 export function downloadText(text: string, filename: string) {
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+  triggerDownload(
+    new Blob(["﻿" + text], { type: "text/plain;charset=utf-8" }),
+    filename,
+  );
 }

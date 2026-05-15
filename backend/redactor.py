@@ -25,14 +25,23 @@ def apply_rects_to_pdf(
         doc.close()
         raise ValueError("El PDF está protegido con contraseña")
 
-    doc.bake()
-
+    # Agrupa rectángulos por página, ya transformados a coordenadas de
+    # mediabox. El visor (pdf.js) trabaja en coordenadas "visibles" — las
+    # que el usuario ve después de aplicar la rotación del PDF. PyMuPDF en
+    # cambio coloca anotaciones en mediabox sin rotar, así que sin esta
+    # corrección los rectángulos caen en el lugar equivocado en PDFs con
+    # /Rotate ≠ 0.
     pages_rects: dict[int, list[pymupdf.Rect]] = {}
     for r in rects:
         pg = r["page"]
-        pages_rects.setdefault(pg, []).append(
-            pymupdf.Rect(r["x"], r["y"], r["x"] + r["width"], r["y"] + r["height"])
+        page = doc[pg]
+        visible = pymupdf.Rect(
+            r["x"], r["y"], r["x"] + r["width"], r["y"] + r["height"]
         )
+        mediabox_rect = visible * page.derotation_matrix
+        # Normalizamos para garantizar x0<x1 e y0<y1 tras la rotación.
+        mediabox_rect.normalize()
+        pages_rects.setdefault(pg, []).append(mediabox_rect)
 
     all_text_parts: list[str] = []
     for page_num, page in enumerate(doc):
@@ -49,8 +58,8 @@ def apply_rects_to_pdf(
                 images=pymupdf.PDF_REDACT_IMAGE_NONE,
                 graphics=pymupdf.PDF_REDACT_LINE_ART_NONE,
             )
-            # Repinta encima por si el PDF era una imagen escaneada sin
-            # capa de texto: apply_redactions no oculta el bitmap subyacente.
+            # Repinta por si la página era una imagen escaneada: apply_redactions
+            # no oculta el bitmap subyacente.
             for rect in page_rects:
                 page.draw_rect(rect, color=(0, 0, 0), fill=(0, 0, 0))
 

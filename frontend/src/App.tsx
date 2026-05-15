@@ -3,21 +3,19 @@ import { AlertCircle } from "lucide-react";
 import type { ApplyResponse, RedactRect } from "./api";
 import { applyRedactions, fileToBase64, makeRectId } from "./api";
 import AppHeader from "./components/AppHeader";
-import DualViewer from "./components/DualViewer";
-import Uploader from "./components/Uploader";
+import Editor from "./components/Editor";
 import { Button } from "./components/ui/Button";
 
-type AppState = "idle" | "editing" | "error";
-
 export default function App() {
-  const [state, setState] = useState<AppState>("idle");
-  const [originalBase64, setOriginalBase64] = useState("");
+  const [base64, setBase64] = useState("");
   const [rects, setRects] = useState<RedactRect[]>([]);
   const [appliedResult, setAppliedResult] = useState<ApplyResponse | null>(null);
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
   const [dirty, setDirty] = useState(false);
   const [applying, setApplying] = useState(false);
+
+  const hasFile = base64.length > 0;
 
   const handleStart = useCallback(async (file: File) => {
     try {
@@ -27,28 +25,30 @@ export default function App() {
       setDirty(false);
       setRects([]);
       const b64 = await fileToBase64(file);
-      setOriginalBase64(b64);
-      setState("editing");
+      setBase64(b64);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo abrir el PDF");
-      setState("error");
     }
   }, []);
 
   const handleApply = useCallback(async () => {
+    if (!base64 || !dirty) return;
     setApplying(true);
     setError("");
     try {
-      const applied = await applyRedactions(originalBase64, rects);
+      const applied = await applyRedactions(base64, rects);
+      // Reemplazamos el PDF en pantalla por el redactado, dejándolo listo
+      // para nuevas zonas si el usuario quiere iterar.
+      setBase64(applied.pdf_base64);
+      setRects([]);
       setAppliedResult(applied);
       setDirty(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al aplicar");
-      setState("error");
+      setError(e instanceof Error ? e.message : "Error al aplicar las redacciones");
     } finally {
       setApplying(false);
     }
-  }, [originalBase64, rects]);
+  }, [base64, dirty, rects]);
 
   const handleAddRect = useCallback(
     (rect: Omit<RedactRect, "id" | "label">) => {
@@ -72,8 +72,7 @@ export default function App() {
   }, []);
 
   const handleReset = useCallback(() => {
-    setState("idle");
-    setOriginalBase64("");
+    setBase64("");
     setRects([]);
     setAppliedResult(null);
     setError("");
@@ -91,42 +90,36 @@ export default function App() {
       </a>
       <AppHeader />
       <main id="main" className="flex flex-1 min-h-0 flex-col overflow-hidden">
-        {state === "idle" && <Uploader onFileSelected={handleStart} />}
-
-        {state === "editing" && (
-          <DualViewer
-            originalBase64={originalBase64}
-            rects={rects}
-            dirty={dirty}
-            applying={applying}
-            appliedResult={appliedResult}
-            fileName={fileName}
-            onAddRect={handleAddRect}
-            onRemoveRect={handleRemoveRect}
-            onUndo={handleUndo}
-            onApply={handleApply}
-            onNewFile={handleReset}
-            canUndo={rects.length > 0}
-          />
-        )}
-
-        {state === "error" && (
-          <div className="flex flex-1 items-center justify-center px-6">
-            <div
-              role="alert"
-              className="max-w-md rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm"
-            >
-              <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-600">
-                <AlertCircle className="h-5 w-5" aria-hidden />
-              </div>
-              <p className="mb-4 text-sm font-medium text-red-800">{error}</p>
-              <Button variant="destructive" onClick={handleReset}>
-                Volver al inicio
-              </Button>
-            </div>
-          </div>
-        )}
+        <Editor
+          base64={base64}
+          rects={rects}
+          applying={applying}
+          dirty={dirty}
+          appliedResult={appliedResult}
+          fileName={fileName}
+          hasFile={hasFile}
+          onAddRect={handleAddRect}
+          onRemoveRect={handleRemoveRect}
+          onUndo={handleUndo}
+          onApply={handleApply}
+          onNewFile={handleReset}
+          onFileSelected={handleStart}
+        />
       </main>
+      {error && (
+        <div
+          role="alert"
+          className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2"
+        >
+          <div className="pointer-events-auto flex items-center gap-3 rounded-lg border border-red-200 bg-white px-4 py-3 shadow-lg">
+            <AlertCircle className="h-5 w-5 text-red-600" aria-hidden />
+            <span className="text-sm font-medium text-red-800">{error}</span>
+            <Button variant="ghost" size="sm" onClick={() => setError("")}>
+              Cerrar
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
