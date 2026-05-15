@@ -16,8 +16,6 @@ del flujo de contenidos del PDF — no se tapa con una imagen.
 
 ## Inicio rápido
 
-Necesitas [`uv`](https://docs.astral.sh/uv/) y [Node.js 18+](https://nodejs.org/).
-
 ```bash
 git clone https://github.com/Saultr21/pdf-privacy-tool.git
 cd pdf-privacy-tool/redactpdf
@@ -25,8 +23,17 @@ cd pdf-privacy-tool/redactpdf
 run.bat            # Windows
 ```
 
-El primer arranque instala dependencias y compila el frontend (~1 min). Después
-abre el navegador en `http://127.0.0.1:8000` automáticamente.
+El primer arranque:
+
+1. **Comprueba si tienes [`uv`](https://docs.astral.sh/uv/) y [Node.js](https://nodejs.org/).** Si falta alguno, te pregunta antes de instalarlo automáticamente:
+   - **Windows:** `uv` se instala a nivel de usuario (sin admin); Node se instala con `winget`.
+   - **macOS:** Node se instala con Homebrew si lo tienes.
+   - **Linux:** Node se instala con el gestor de paquetes detectado (`apt`, `dnf` o `pacman`, requiere sudo).
+2. Instala las dependencias Python y compila el frontend (~1 min).
+3. Abre el navegador en `http://127.0.0.1:8000` automáticamente.
+
+Si prefieres instalar las herramientas a mano, descarga uv desde
+<https://docs.astral.sh/uv/> y Node desde <https://nodejs.org/>.
 
 ## Uso
 
@@ -88,7 +95,9 @@ acaba donde el usuario lo ve, no en otra esquina del PDF original.
 
 ## Requisitos
 
-- Python ≥ 3.10
+Lo único que necesitas tener antes de empezar es una conexión a Internet — el resto lo gestiona el script de arranque. Si lo quieres preparar a mano:
+
+- Python ≥ 3.10 (uv lo descarga solo si falta)
 - Node.js ≥ 18
 - [`uv`](https://docs.astral.sh/uv/)
 
