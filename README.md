@@ -1,6 +1,6 @@
 # RedactPDF
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776ab.svg)](https://www.python.org/)
 [![Node](https://img.shields.io/badge/Node-18+-339933.svg)](https://nodejs.org/)
 
