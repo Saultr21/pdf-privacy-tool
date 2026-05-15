@@ -6,17 +6,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .ocr_helper import check_tesseract
-from .redactor import apply_rects_to_pdf, detect_pii_rects
+from .redactor import apply_rects_to_pdf
 from .schemas import RedactSettings
 
-check_tesseract()
+MAX_PDF_BYTES = 100 * 1024 * 1024
 
-app = FastAPI(title="PII Redactor", version="0.1.0")
+app = FastAPI(title="PII Redactor", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -31,19 +30,6 @@ class RedactRect(BaseModel):
     label: str = "manual"
 
 
-class DetectRequest(BaseModel):
-    pdf_base64: str
-    settings: RedactSettings = RedactSettings()
-
-
-class DetectResponse(BaseModel):
-    rects: list[RedactRect]
-    full_text: str
-    pages_processed: int
-    ocr_pages: int
-    pii_count: int
-
-
 class ApplyRequest(BaseModel):
     pdf_base64: str
     rects: list[RedactRect]
@@ -56,47 +42,27 @@ class ApplyResponse(BaseModel):
 
 
 @app.get("/api/health")
-def health():
+def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/api/detect", response_model=DetectResponse)
-async def detect(request: DetectRequest):
+@app.post("/api/apply", response_model=ApplyResponse)
+async def apply_redactions(request: ApplyRequest) -> ApplyResponse:
     try:
         pdf_bytes = base64.b64decode(request.pdf_base64)
-    except Exception:
-        raise HTTPException(400, "PDF inválido o mal codificado en base64")
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(400, "PDF inválido o mal codificado en base64") from exc
 
-    if len(pdf_bytes) > 100 * 1024 * 1024:
+    if len(pdf_bytes) > MAX_PDF_BYTES:
         raise HTTPException(413, "El PDF supera el límite de 100 MB")
 
     try:
-        rects, full_text, pages, ocr_pages, pii_count = detect_pii_rects(
-            pdf_bytes, request.settings
+        rects_dicts = [r.model_dump() for r in request.rects]
+        redacted_bytes, censored_text = apply_rects_to_pdf(
+            pdf_bytes, rects_dicts, request.settings
         )
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-
-    return DetectResponse(
-        rects=[RedactRect(**r) for r in rects],
-        full_text=full_text,
-        pages_processed=pages,
-        ocr_pages=ocr_pages,
-        pii_count=pii_count,
-    )
-
-
-@app.post("/api/apply", response_model=ApplyResponse)
-async def apply_redactions(request: ApplyRequest):
-    try:
-        pdf_bytes = base64.b64decode(request.pdf_base64)
-    except Exception:
-        raise HTTPException(400, "PDF inválido o mal codificado en base64")
-
-    rects_dicts = [r.model_dump() for r in request.rects]
-    redacted_bytes, censored_text = apply_rects_to_pdf(
-        pdf_bytes, rects_dicts, request.settings
-    )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
     return ApplyResponse(
         pdf_base64=base64.b64encode(redacted_bytes).decode(),
@@ -108,7 +74,8 @@ frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
 if frontend_dist.exists():
     app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="spa")
 
+
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000)
+    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000)

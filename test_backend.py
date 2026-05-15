@@ -1,47 +1,64 @@
-"""End-to-end test: create a PDF with PII, redact it, verify PII is gone."""
+"""End-to-end test: build a PDF, apply a manual redaction rect, verify text is gone."""
 import pymupdf
-from backend.redactor import redact_pdf
+
+from backend.redactor import apply_rects_to_pdf
 from backend.schemas import RedactSettings
 
+SECRET = "juan.perez@example.com"
 PII_TEXT = (
     "Nombre: Juan Pérez García\n"
-    "Email: juan.perez@example.com\n"
+    f"Email: {SECRET}\n"
     "Teléfono: +34 612 345 678\n"
-    "Dirección: Calle Falsa 123, Madrid 28001\n"
-    "Fecha de nacimiento: 15/03/1985\n"
 )
 
-# 1. Create a test PDF in memory
-doc = pymupdf.open()
-page = doc.new_page()
-page.insert_text((72, 72), PII_TEXT, fontsize=12)
-pdf_bytes = doc.tobytes()
-doc.close()
-print(f"[TEST] PDF de prueba creado ({len(pdf_bytes)} bytes)")
 
-# 2. Redact
-settings = RedactSettings()
-redacted_bytes, redacted_text, pages, ocr_pages, pii_count = redact_pdf(pdf_bytes, settings)
-print(f"[TEST] Redactado: {pages} páginas, {ocr_pages} OCR, {pii_count} entidades PII")
-print(f"[TEST] Texto censurado:\n{redacted_text}")
+def _build_pdf() -> bytes:
+    doc = pymupdf.open()
+    page = doc.new_page()
+    page.insert_text((72, 72), PII_TEXT, fontsize=12)
+    data = doc.tobytes()
+    doc.close()
+    return data
 
-# 3. Verify PII is gone from the output PDF
-out_doc = pymupdf.open(stream=redacted_bytes, filetype="pdf")
-out_page = out_doc[0]
 
-pii_samples = ["juan.perez@example.com", "Juan Pérez", "+34 612 345 678"]
-found_pii = []
-for sample in pii_samples:
-    results = out_page.search_for(sample)
-    if results:
-        found_pii.append(sample)
+def main() -> int:
+    pdf_bytes = _build_pdf()
+    print(f"[TEST] PDF creado ({len(pdf_bytes)} bytes)")
 
-out_doc.close()
+    # Find the email span and build a rect that covers it.
+    src = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+    page = src[0]
+    hits = page.search_for(SECRET)
+    if not hits:
+        print("[FAIL] search_for no encontró el email — fallo de configuración del test")
+        return 1
+    rect = hits[0]
+    src.close()
 
-if found_pii:
-    print(f"[FAIL] PII aún presente en el PDF de salida: {found_pii}")
-else:
-    print("[PASS] Ningún PII encontrado en el PDF de salida")
+    rects = [
+        {
+            "page": 0,
+            "x": rect.x0,
+            "y": rect.y0,
+            "width": rect.width,
+            "height": rect.height,
+            "label": "manual",
+        }
+    ]
 
-if pii_count == 0:
-    print("[WARN] El modelo no detectó entidades PII — puede que necesite descargarse primero")
+    redacted_bytes, censored_text = apply_rects_to_pdf(pdf_bytes, rects, RedactSettings())
+    print(f"[TEST] Texto censurado:\n{censored_text}")
+
+    out = pymupdf.open(stream=redacted_bytes, filetype="pdf")
+    leak = out[0].search_for(SECRET)
+    out.close()
+
+    if leak:
+        print(f"[FAIL] El email sigue presente: {leak}")
+        return 1
+    print("[PASS] El email ya no se encuentra en el PDF redactado")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

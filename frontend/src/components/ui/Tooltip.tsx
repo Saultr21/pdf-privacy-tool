@@ -1,0 +1,47 @@
+import { useId, useState, type ReactNode } from "react";
+import { cn } from "../../lib/cn";
+
+interface Props {
+  content: ReactNode;
+  children: ReactNode;
+  side?: "top" | "bottom";
+  className?: string;
+}
+
+export function Tooltip({ content, children, side = "bottom", className }: Props) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+
+  return (
+    <span
+      className="relative inline-flex"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={() => setOpen(false)}
+    >
+      <span aria-describedby={open ? id : undefined}>{children}</span>
+      {open && (
+        <span
+          id={id}
+          role="tooltip"
+          className={cn(
+            "pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-950 px-2 py-1 text-xs font-medium text-white shadow-md",
+            side === "top" ? "bottom-full mb-2" : "top-full mt-2",
+            className,
+          )}
+        >
+          {content}
+        </span>
+      )}
+    </span>
+  );
+}
+
+export function Kbd({ children }: { children: ReactNode }) {
+  return (
+    <kbd className="ml-1 rounded border border-slate-700 bg-slate-800 px-1 py-px font-mono text-[10px] text-slate-100">
+      {children}
+    </kbd>
+  );
+}

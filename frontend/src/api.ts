@@ -1,10 +1,3 @@
-export interface RedactSettings {
-  confidence_threshold: number;
-  ocr_language: string;
-  categories: string[];
-  replacement_style: "label" | "block";
-}
-
 export interface RedactRect {
   page: number;
   x: number;
@@ -12,15 +5,7 @@ export interface RedactRect {
   width: number;
   height: number;
   label: string;
-  id: string; // client-side unique id
-}
-
-export interface DetectResponse {
-  rects: Omit<RedactRect, "id">[];
-  full_text: string;
-  pages_processed: number;
-  ocr_pages: number;
-  pii_count: number;
+  id: string;
 }
 
 export interface ApplyResponse {
@@ -28,64 +13,32 @@ export interface ApplyResponse {
   text: string;
 }
 
-export const DEFAULT_SETTINGS: RedactSettings = {
-  confidence_threshold: 0.5,
-  ocr_language: "spa+eng",
-  categories: [
-    "private_person",
-    "private_address",
-    "private_email",
-    "private_phone",
-    "private_url",
-    "private_date",
-    "account_number",
-    "secret",
-  ],
-  replacement_style: "label",
-};
-
 let _idCounter = 0;
 export function makeRectId(): string {
   return `rect_${++_idCounter}_${Date.now()}`;
 }
 
 export function fileToBase64(file: File): Promise<string> {
-  return file.arrayBuffer().then((buf) =>
-    btoa(
-      new Uint8Array(buf).reduce(
-        (data, byte) => data + String.fromCharCode(byte),
-        ""
-      )
-    )
-  );
-}
-
-export async function detectPii(
-  pdfBase64: string,
-  settings: RedactSettings
-): Promise<DetectResponse> {
-  const response = await fetch("/api/detect", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pdf_base64: pdfBase64, settings }),
+  return file.arrayBuffer().then((buf) => {
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
   });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.detail || `Error ${response.status}`);
-  }
-  return response.json();
 }
 
 export async function applyRedactions(
   pdfBase64: string,
   rects: RedactRect[],
-  settings: RedactSettings
 ): Promise<ApplyResponse> {
   const apiRects = rects.map(({ id: _id, ...rest }) => rest);
   const response = await fetch("/api/apply", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pdf_base64: pdfBase64, rects: apiRects, settings }),
+    body: JSON.stringify({ pdf_base64: pdfBase64, rects: apiRects, settings: {} }),
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));

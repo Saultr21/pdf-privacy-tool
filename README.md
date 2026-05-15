@@ -1,83 +1,86 @@
-# PII Redactor
+# Redact PII
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776ab.svg)](https://www.python.org/)
+[![Node](https://img.shields.io/badge/Node-18+-339933.svg)](https://nodejs.org/)
 
-Aplicación web para censurar información personal identificable (PII) en documentos PDF. **Todo el procesamiento ocurre en tu máquina. Ningún dato sale al exterior.**
+Aplicación web para **censurar a mano** información sensible en documentos PDF. Dibujas un rectángulo, aplicas, y el texto debajo se elimina realmente del PDF (no se tapa con una imagen). **Todo el procesamiento ocurre en tu equipo, sin enviar nada a Internet.**
 
-Soporta PDFs digitales y escaneados (OCR automático con Tesseract). Produce texto plano censurado y PDF con redacción real (el texto PII se elimina del content stream, no se tapa).
+## Inicio rápido
+
+Necesitas [`uv`](https://docs.astral.sh/uv/) y [Node.js 18+](https://nodejs.org/).
+
+```bash
+git clone https://github.com/Saultr21/pdf-privacy-tool.git
+cd pdf-privacy-tool/redactpii
+./run.sh           # macOS / Linux
+run.bat            # Windows
+```
+
+El primer arranque instala dependencias y compila el frontend (~1 min). Después abre el navegador en `http://127.0.0.1:8000` automáticamente.
+
+## Uso
+
+1. Arrastra un PDF a la zona de subida.
+2. En el editor, dibuja rectángulos sobre la información que quieras eliminar (modo **Dibujar**).
+3. Para retirar un rectángulo, cambia a **Borrar** y haz clic encima.
+4. Pulsa **Aplicar cambios** y descarga el PDF resultante o el texto censurado.
+
+### Atajos de teclado
+
+| Acción | Atajo |
+|---|---|
+| Modo Dibujar | `D` |
+| Modo Borrar | `E` |
+| Deshacer último rectángulo | `Ctrl+Z` |
+| Aplicar cambios | `Ctrl+Enter` |
 
 ## Cómo funciona
 
 ```
-Navegador (React)  →  FastAPI Backend  →  PDF procesado
-                          │
-                          ├─ PyMuPDF: extracción texto + coordenadas
-                          ├─ Tesseract: OCR si la página es imagen
-                          ├─ openai/privacy-filter: detección PII
-                          └─ PyMuPDF: redacción real (apply_redactions)
+Navegador (React + react-pdf)  ──►  FastAPI  ──►  PyMuPDF
+            │                                       │
+            │   rectángulos                         │ add_redact_annot
+            │   en coordenadas PDF                  │ apply_redactions
+            ▼                                       ▼
+       editor visual                          PDF con texto eliminado
 ```
 
-## Privacidad
+PyMuPDF aplica `apply_redactions`, que **borra el texto y los gráficos** del flujo de contenidos del PDF — abrir el resultado en otro visor confirma que la información ya no se puede seleccionar ni copiar.
 
-> **Todo el procesamiento ocurre localmente en tu dispositivo.** El modelo de detección PII (`openai/privacy-filter`) se descarga una sola vez (~3 GB) y se ejecuta offline. No se envía ningún dato a servidores externos.
+## Requisitos
 
-## Instalación rápida
+- Python ≥ 3.10
+- Node.js ≥ 18
+- [`uv`](https://docs.astral.sh/uv/) (gestor de paquetes Python)
 
-### Requisitos previos
+Sin Tesseract, sin GPU, sin descargas de modelos de varios GB.
 
-- Python 3.10+
-- Node.js 18+
-- Tesseract OCR
+## Desarrollo
 
-### Windows
+```bash
+# Backend (puerto 8000)
+uv run uvicorn backend.main:app --reload --port 8000
 
-```bat
-git clone https://github.com/Saultr21/pdf-privacy-tool.git
-cd pdf-privacy-tool
-install.bat
-run.bat
+# Frontend con HMR (puerto 5173, proxy /api → 8000)
+cd frontend && npm install && npm run dev
 ```
-
-Abre http://localhost:8000 en tu navegador.
-
-## GPU (CUDA)
-
-Por defecto se usa CPU. Para aprovechar GPU NVIDIA:
-
-```bat
-pip install torch --index-url https://download.pytorch.org/whl/cu121
-```
-
-El backend detecta automáticamente CUDA y usa GPU si está disponible.
-
-## Uso
-
-1. Abre http://localhost:8000
-2. Arrastra o selecciona un PDF
-3. Ajusta la configuración (opcional): umbral de confianza, idioma OCR, categorías PII
-4. Haz clic en "Redactar"
-5. Descarga el PDF redactado o el texto censurado
 
 ## Stack
 
-| Componente | Tecnología |
+| Capa | Tecnología |
 |---|---|
 | Backend | FastAPI + Uvicorn |
 | PDF | PyMuPDF |
-| OCR | Tesseract |
-| PII | `openai/privacy-filter` (Transformers) |
-| Frontend | React 18 + Vite + TypeScript + Tailwind CSS |
-| Deps | uv |
+| Frontend | React 19 + Vite + TypeScript + Tailwind |
+| Iconos | lucide-react |
+| Dependencias Python | uv |
 
 ## Licencias
 
-- **Este proyecto:** Apache 2.0
-- **PyMuPDF:** GNU AGPL v3 — para uso comercial en software propietario, adquirir [licencia comercial de Artifex](https://artifex.com/licensing/)
-- **openai/privacy-filter:** Apache 2.0 — modelo de [OpenAI en HuggingFace](https://huggingface.co/openai/privacy-filter)
+- **Este proyecto:** Apache 2.0 (ver [LICENSE](LICENSE)).
+- **PyMuPDF:** GNU AGPL v3. Para uso comercial en software propietario, adquirir [licencia comercial de Artifex](https://artifex.com/licensing/).
 
-## Créditos
+## Contribuir
 
-- [OpenAI](https://openai.com) por el modelo `privacy-filter`
-- [HuggingFace](https://huggingface.co) por Transformers
-- [Artifex](https://artifex.com) por PyMuPDF
-- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract)
+Las contribuciones son bienvenidas. Abre un issue describiendo el cambio antes de un PR grande. Para PRs pequeños, ejecuta `uv run python test_backend.py` y `cd frontend && npx tsc -b --noEmit` antes de proponerlos.

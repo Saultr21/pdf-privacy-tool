@@ -1,13 +1,11 @@
 [project]
 name = "redactpii"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "pymupdf>=1.24",
-    "transformers>=4.47",
-    "torch>=2.2",
     "python-multipart",
     "pydantic>=2.0",
 ]

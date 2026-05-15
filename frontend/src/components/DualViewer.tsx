@@ -1,30 +1,52 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  Eraser,
+  FilePlus,
+  Loader2,
+  Pencil,
+  RotateCcw,
+  Sparkles,
+} from "lucide-react";
 import type { ApplyResponse, RedactRect } from "../api";
+import { Badge } from "./ui/Badge";
+import { Button } from "./ui/Button";
+import { Tooltip, Kbd } from "./ui/Tooltip";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import DownloadPanel from "./DownloadPanel";
 import PdfPanel from "./PdfPanel";
+
+type Mode = "draw" | "remove" | "none";
 
 interface Props {
   originalBase64: string;
   rects: RedactRect[];
-  stats: { pages: number; ocr: number; pii: number };
   dirty: boolean;
+  applying: boolean;
   appliedResult: ApplyResponse | null;
   fileName: string;
   onAddRect: (rect: Omit<RedactRect, "id" | "label">) => void;
   onRemoveRect: (id: string) => void;
+  onUndo: () => void;
+  onApply: () => void;
+  onNewFile: () => void;
+  canUndo: boolean;
 }
 
 export default function DualViewer({
   originalBase64,
   rects,
-  stats,
   dirty,
+  applying,
   appliedResult,
   fileName,
   onAddRect,
   onRemoveRect,
+  onUndo,
+  onApply,
+  onNewFile,
+  canUndo,
 }: Props) {
-  const [mode, setMode] = useState<"select" | "remove" | "none">("none");
+  const [mode, setMode] = useState<Mode>("draw");
   const [totalPages, setTotalPages] = useState(0);
   const [pageInput, setPageInput] = useState("1");
   const [scrollTargetPage, setScrollTargetPage] = useState(0);
@@ -37,64 +59,113 @@ export default function DualViewer({
     const page = Math.min(Math.max(parsed, 1), totalPages);
     setPageInput(String(page));
     setScrollTargetPage(page - 1);
-    setScrollToken((token) => token + 1);
+    setScrollToken((t) => t + 1);
   }
 
-  const toolButton =
-    "inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-semibold shadow-sm transition";
+  const shortcuts = useMemo(
+    () => [
+      { key: "z", ctrl: true, handler: () => canUndo && onUndo() },
+      {
+        key: "Enter",
+        ctrl: true,
+        handler: () => {
+          if (dirty && !applying) onApply();
+        },
+      },
+      { key: "Escape", handler: () => setMode("draw") },
+      { key: "d", handler: () => setMode("draw") },
+      { key: "e", handler: () => setMode("remove") },
+    ],
+    [applying, canUndo, dirty, onApply, onUndo],
+  );
+
+  useKeyboardShortcuts(shortcuts);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-slate-100">
-      <div className="shrink-0 border-b border-slate-200 bg-white px-6 py-3">
-        <div className="mx-auto flex max-w-[1800px] items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              onClick={() => setMode(mode === "select" ? "none" : "select")}
-              className={`${toolButton} ${
-                mode === "select"
-                  ? "border-red-600 bg-red-600 text-white"
-                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-              }`}
+    <div className="flex flex-1 min-h-0 flex-col bg-slate-50">
+      <div className="shrink-0 border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-3 px-6 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              role="radiogroup"
+              aria-label="Modo de edición"
+              className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 17h16M7 4v16M17 4v16" />
-              </svg>
-              Censurar zona
-            </button>
-
-            <button
-              onClick={() => setMode(mode === "remove" ? "none" : "remove")}
-              className={`${toolButton} ${
-                mode === "remove"
-                  ? "border-amber-500 bg-amber-500 text-white"
-                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Quitar censura
-            </button>
-
-            {mode !== "none" && (
-              <button
-                onClick={() => setMode("none")}
-                className="h-9 rounded-lg px-3 text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+              <Tooltip
+                content={
+                  <>
+                    Dibujar zona <Kbd>D</Kbd>
+                  </>
+                }
               >
-                Cancelar
-              </button>
-            )}
+                <button
+                  role="radio"
+                  aria-checked={mode === "draw"}
+                  onClick={() => setMode("draw")}
+                  className={
+                    mode === "draw"
+                      ? "inline-flex h-8 items-center gap-1.5 rounded-[5px] bg-white px-3 text-sm font-semibold text-slate-950 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
+                      : "inline-flex h-8 items-center gap-1.5 rounded-[5px] px-3 text-sm font-medium text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
+                  }
+                >
+                  <Pencil className="h-3.5 w-3.5" aria-hidden />
+                  Dibujar
+                </button>
+              </Tooltip>
+              <Tooltip
+                content={
+                  <>
+                    Borrar zona <Kbd>E</Kbd>
+                  </>
+                }
+              >
+                <button
+                  role="radio"
+                  aria-checked={mode === "remove"}
+                  onClick={() => setMode("remove")}
+                  className={
+                    mode === "remove"
+                      ? "inline-flex h-8 items-center gap-1.5 rounded-[5px] bg-white px-3 text-sm font-semibold text-slate-950 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
+                      : "inline-flex h-8 items-center gap-1.5 rounded-[5px] px-3 text-sm font-medium text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
+                  }
+                >
+                  <Eraser className="h-3.5 w-3.5" aria-hidden />
+                  Borrar
+                </button>
+              </Tooltip>
+            </div>
 
-            <div className="h-6 w-px bg-slate-200" />
+            <Tooltip
+              content={
+                <>
+                  Deshacer último <Kbd>Ctrl+Z</Kbd>
+                </>
+              }
+            >
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Deshacer último rectángulo"
+                disabled={!canUndo}
+                onClick={onUndo}
+              >
+                <RotateCcw className="h-4 w-4" aria-hidden />
+              </Button>
+            </Tooltip>
+
+            <span className="mx-1 h-6 w-px bg-slate-200" aria-hidden />
 
             <form
-              className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2"
+              className="flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2"
               onSubmit={(e) => {
                 e.preventDefault();
                 jumpToPage();
               }}
             >
-              <label className="text-xs font-semibold text-slate-600" htmlFor="page-jump">
+              <label
+                className="text-xs font-medium text-slate-600"
+                htmlFor="page-jump"
+              >
                 Página
               </label>
               <input
@@ -104,26 +175,49 @@ export default function DualViewer({
                 max={totalPages || 1}
                 value={pageInput}
                 onChange={(e) => setPageInput(e.target.value)}
-                className="h-7 w-16 rounded-md border border-slate-300 bg-white px-2 text-sm font-medium text-slate-800 outline-none transition focus:border-slate-500"
+                className="h-7 w-14 rounded border border-slate-300 bg-white px-2 text-sm font-medium text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
               />
-              <span className="text-xs font-medium text-slate-500">/ {totalPages || "-"}</span>
-              <button
-                type="submit"
-                disabled={!totalPages}
-                className="h-7 rounded-md bg-white px-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Ir
-              </button>
+              <span className="text-xs font-medium text-slate-500">
+                / {totalPages || "—"}
+              </span>
             </form>
+
+            <Badge tone="neutral">
+              {rects.length} {rects.length === 1 ? "zona" : "zonas"}
+            </Badge>
+            {dirty && <Badge tone="warning">Sin aplicar</Badge>}
+            {!dirty && appliedResult && (
+              <Badge tone="success">
+                <Sparkles className="h-3 w-3" aria-hidden />
+                Aplicado
+              </Badge>
+            )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <StatPill tone="blue">{stats.pages} pág.</StatPill>
-              <StatPill tone="amber">{stats.ocr} OCR</StatPill>
-              <StatPill tone="red">{rects.length} zonas</StatPill>
-              {dirty && <StatPill tone="orange">Sin aplicar</StatPill>}
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Tooltip
+              content={
+                <>
+                  Aplicar redacciones <Kbd>Ctrl+Enter</Kbd>
+                </>
+              }
+            >
+              <Button
+                variant="primary"
+                disabled={!dirty || applying}
+                onClick={onApply}
+              >
+                {applying ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    Aplicando…
+                  </>
+                ) : (
+                  <>Aplicar cambios</>
+                )}
+              </Button>
+            </Tooltip>
+
             {appliedResult && !dirty && (
               <DownloadPanel
                 pdfBase64={appliedResult.pdf_base64}
@@ -131,105 +225,79 @@ export default function DualViewer({
                 originalName={fileName}
               />
             )}
+
+            <span className="mx-1 h-6 w-px bg-slate-200" aria-hidden />
+
+            <Button variant="outline" onClick={onNewFile}>
+              <FilePlus className="h-4 w-4" aria-hidden />
+              Nuevo PDF
+            </Button>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 px-8 py-6">
-        <div className="mx-auto grid h-full max-w-[1800px] grid-cols-2 gap-6 min-h-0">
-          <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm">
-            <PanelHeader title="Original" />
-            <div className="flex-1 overflow-auto bg-slate-200 p-6">
-              <PdfPanel
-                base64={originalBase64}
-                onDocLoad={setTotalPages}
-                scrollToPage={scrollTargetPage}
-                scrollToken={scrollToken}
-                drawMode={false}
-                removeMode={false}
-                rects={[]}
-              />
-            </div>
-          </div>
-
-          <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm">
-            <PanelHeader
-              title="Redactado"
-              detail={
-                mode === "select"
-                  ? "Dibuja un rectángulo"
-                  : mode === "remove"
-                    ? "Clic en una zona negra"
-                    : undefined
-              }
-              tone={mode === "select" ? "red" : mode === "remove" ? "amber" : "slate"}
+      <div className="flex-1 min-h-0 px-6 py-5">
+        <div className="mx-auto grid h-full max-w-screen-2xl grid-cols-1 gap-5 lg:grid-cols-2 min-h-0">
+          <Panel title="Original">
+            <PdfPanel
+              base64={originalBase64}
+              onDocLoad={setTotalPages}
+              scrollToPage={scrollTargetPage}
+              scrollToken={scrollToken}
+              drawMode={false}
+              removeMode={false}
+              rects={[]}
             />
-            <div className="flex-1 overflow-auto bg-slate-200 p-6">
-              <PdfPanel
-                base64={originalBase64}
-                scrollToPage={scrollTargetPage}
-                scrollToken={scrollToken}
-                drawMode={mode === "select"}
-                removeMode={mode === "remove"}
-                rects={rects}
-                onRectDrawn={onAddRect}
-                onRectClick={onRemoveRect}
-              />
-            </div>
-          </div>
+          </Panel>
+
+          <Panel
+            title="Redactado"
+            detail={mode === "draw" ? "Arrastra para dibujar" : "Clic para borrar"}
+            tone={mode === "draw" ? "danger" : "warning"}
+          >
+            <PdfPanel
+              base64={originalBase64}
+              scrollToPage={scrollTargetPage}
+              scrollToken={scrollToken}
+              drawMode={mode === "draw"}
+              removeMode={mode === "remove"}
+              rects={rects}
+              onRectDrawn={onAddRect}
+              onRectClick={onRemoveRect}
+            />
+          </Panel>
         </div>
       </div>
     </div>
   );
 }
 
-function StatPill({
-  children,
-  tone,
-}: {
-  children: React.ReactNode;
-  tone: "blue" | "amber" | "red" | "orange";
-}) {
-  const classes = {
-    blue: "border-blue-200 bg-blue-50 text-blue-800",
-    amber: "border-amber-200 bg-amber-50 text-amber-800",
-    red: "border-red-200 bg-red-50 text-red-800",
-    orange: "border-orange-200 bg-orange-50 text-orange-700",
-  }[tone];
-
-  return (
-    <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${classes}`}>
-      {children}
-    </span>
-  );
-}
-
-function PanelHeader({
+function Panel({
   title,
   detail,
-  tone = "slate",
+  tone = "neutral",
+  children,
 }: {
   title: string;
   detail?: string;
-  tone?: "slate" | "red" | "amber";
+  tone?: "neutral" | "danger" | "warning";
+  children: React.ReactNode;
 }) {
-  const detailClass =
-    tone === "red"
-      ? "bg-red-50 text-red-700 ring-red-200"
-      : tone === "amber"
-        ? "bg-amber-50 text-amber-700 ring-amber-200"
-        : "bg-slate-50 text-slate-600 ring-slate-200";
-
   return (
-    <div className="flex h-10 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4">
-      <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
-        {title}
-      </span>
-      {detail && (
-        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${detailClass}`}>
-          {detail}
-        </span>
-      )}
-    </div>
+    <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <header className="flex h-10 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          {title}
+        </h3>
+        {detail && (
+          <Badge
+            tone={tone === "danger" ? "danger" : tone === "warning" ? "warning" : "neutral"}
+          >
+            {detail}
+          </Badge>
+        )}
+      </header>
+      <div className="flex-1 overflow-auto bg-slate-100 p-4">{children}</div>
+    </section>
   );
 }
