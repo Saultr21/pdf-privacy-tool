@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   Check,
   Download,
@@ -58,10 +58,11 @@ export default function EditorToolbar({
   const isScanned = !!appliedResult && !hasText;
   const canApply = dirty && !applying;
 
-  // keep pageInput in sync with prop when caller programmatically jumps
-  if (String(currentPage) !== pageInput && document.activeElement?.id !== "page-jump") {
-    queueMicrotask(() => setPageInput(String(currentPage)));
-  }
+  useEffect(() => {
+    if (document.activeElement?.id !== "page-jump") {
+      setPageInput(String(currentPage));
+    }
+  }, [currentPage]);
 
   function submitJump(e: FormEvent) {
     e.preventDefault();

@@ -44,7 +44,7 @@ export async function applyRedactions(
   const response = await fetch("/api/apply", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pdf_base64: pdfBase64, rects: apiRects, settings: {} }),
+    body: JSON.stringify({ pdf_base64: pdfBase64, rects: apiRects }),
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
