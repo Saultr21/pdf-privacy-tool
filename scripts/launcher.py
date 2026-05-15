@@ -1,8 +1,8 @@
 """Cross-platform launcher for RedactPDF.
 
 Usage:
-    uv run python launcher.py            # default port 8000
-    uv run python launcher.py --port 9001
+    uv run python scripts/launcher.py            # default port 8000
+    uv run python scripts/launcher.py --port 9001
 
 Behaviour:
     1. Builds the frontend if `frontend/dist` is missing (npm required).
@@ -23,7 +23,7 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 FRONTEND = ROOT / "frontend"
 DIST = FRONTEND / "dist"
 

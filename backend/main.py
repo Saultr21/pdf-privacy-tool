@@ -1,39 +1,39 @@
+from __future__ import annotations
+
 import base64
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .redactor import apply_rects_to_pdf
-from .schemas import RedactSettings
 
 MAX_PDF_BYTES = 100 * 1024 * 1024
+DEV_FRONTEND_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 
 app = FastAPI(title="RedactPDF", version="0.2.0")
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=list(DEV_FRONTEND_ORIGINS),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
 class RedactRect(BaseModel):
-    page: int
+    page: int = Field(ge=0)
     x: float
     y: float
-    width: float
-    height: float
+    width: float = Field(gt=0)
+    height: float = Field(gt=0)
     label: str = "manual"
 
 
 class ApplyRequest(BaseModel):
     pdf_base64: str
-    rects: list[RedactRect]
-    settings: RedactSettings = RedactSettings()
+    rects: list[RedactRect] = []
 
 
 class ApplyResponse(BaseModel):
@@ -57,9 +57,8 @@ async def apply_redactions(request: ApplyRequest) -> ApplyResponse:
         raise HTTPException(413, "El PDF supera el límite de 100 MB")
 
     try:
-        rects_dicts = [r.model_dump() for r in request.rects]
         redacted_bytes, censored_text = apply_rects_to_pdf(
-            pdf_bytes, rects_dicts, request.settings
+            pdf_bytes, [r.model_dump() for r in request.rects]
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -70,9 +69,11 @@ async def apply_redactions(request: ApplyRequest) -> ApplyResponse:
     )
 
 
-frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
-if frontend_dist.exists():
-    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="spa")
+_FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
+if _FRONTEND_DIST.exists():
+    app.mount(
+        "/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="spa"
+    )
 
 
 if __name__ == "__main__":

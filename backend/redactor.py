@@ -1,81 +1,90 @@
-# Este módulo usa PyMuPDF (fitz), distribuido bajo GNU AGPL v3.
-# Para uso comercial en software propietario, adquirir licencia comercial de Artifex:
-# https://artifex.com/licensing/
+"""PDF redaction core.
+
+Uses PyMuPDF (fitz), distributed under GNU AGPL v3.
+For commercial use in proprietary software, acquire a commercial licence from
+Artifex: https://artifex.com/licensing/
+"""
+from __future__ import annotations
+
+from typing import Iterable
 
 import pymupdf
 
-from .schemas import RedactSettings
-
 
 def apply_rects_to_pdf(
-    pdf_bytes: bytes,
-    rects: list[dict],
-    settings: RedactSettings,  # noqa: ARG001 - reservado para opciones futuras
+    pdf_bytes: bytes, rects: list[dict]
 ) -> tuple[bytes, str]:
-    """Apply a list of user-drawn redaction rectangles to a PDF.
+    """Apply user-drawn rectangles to a PDF and return (redacted_pdf, text).
 
-    For each rectangle PyMuPDF adds a redact annotation filled with black
-    and then commits the annotation, which physically removes the text and
-    vector content beneath. The returned text is the document text with
-    every span that intersects a rectangle replaced by ``***``.
+    Each rectangle has the shape ``{page, x, y, width, height, ...}`` where the
+    coordinates come from pdf.js' visible (rotation-aware) frame. They are
+    converted to PyMuPDF's mediabox frame via ``page.derotation_matrix`` so
+    redactions land in the right place on rotated pages.
+
+    The function adds a redact annotation per rectangle and commits them, which
+    physically removes the underlying text and vector content. A second pass
+    paints the rectangle on top so scanned (raster-only) pages also end up
+    visually censored.
+
+    The returned text is the concatenation of all page text with every span
+    that intersects a rectangle replaced by ``***``. Pages without an embedded
+    text layer (i.e. pure images) contribute an empty page section.
     """
     doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
-
     if doc.is_encrypted:
         doc.close()
         raise ValueError("El PDF está protegido con contraseña")
 
-    # Agrupa rectángulos por página, ya transformados a coordenadas de
-    # mediabox. El visor (pdf.js) trabaja en coordenadas "visibles" — las
-    # que el usuario ve después de aplicar la rotación del PDF. PyMuPDF en
-    # cambio coloca anotaciones en mediabox sin rotar, así que sin esta
-    # corrección los rectángulos caen en el lugar equivocado en PDFs con
-    # /Rotate ≠ 0.
-    pages_rects: dict[int, list[pymupdf.Rect]] = {}
+    pages_rects = _group_rects_by_page(doc, rects)
+
+    text_parts: list[str] = []
+    for page_num, page in enumerate(doc):
+        page_rects = pages_rects.get(page_num, [])
+        text_parts.append(
+            f"--- Página {page_num + 1} ---\n{_censor_page_text(page, page_rects)}\n"
+        )
+        if page_rects:
+            _redact_page(page, page_rects)
+
+    redacted_bytes = doc.tobytes(garbage=4, clean=True, deflate=True)
+    doc.close()
+    return redacted_bytes, "\n".join(text_parts)
+
+
+def _group_rects_by_page(
+    doc: pymupdf.Document, rects: list[dict]
+) -> dict[int, list[pymupdf.Rect]]:
+    grouped: dict[int, list[pymupdf.Rect]] = {}
     for r in rects:
-        pg = r["page"]
-        page = doc[pg]
+        page = doc[r["page"]]
         visible = pymupdf.Rect(
             r["x"], r["y"], r["x"] + r["width"], r["y"] + r["height"]
         )
         mediabox_rect = visible * page.derotation_matrix
-        # Normalizamos para garantizar x0<x1 e y0<y1 tras la rotación.
         mediabox_rect.normalize()
-        pages_rects.setdefault(pg, []).append(mediabox_rect)
-
-    all_text_parts: list[str] = []
-    for page_num, page in enumerate(doc):
-        page_rects = pages_rects.get(page_num, [])
-
-        all_text_parts.append(
-            f"--- Página {page_num + 1} ---\n{_censor_text_from_page(page, page_rects)}\n"
-        )
-
-        if page_rects:
-            for rect in page_rects:
-                page.add_redact_annot(rect, fill=(0, 0, 0))
-            page.apply_redactions(
-                images=pymupdf.PDF_REDACT_IMAGE_NONE,
-                graphics=pymupdf.PDF_REDACT_LINE_ART_NONE,
-            )
-            # Repinta por si la página era una imagen escaneada: apply_redactions
-            # no oculta el bitmap subyacente.
-            for rect in page_rects:
-                page.draw_rect(rect, color=(0, 0, 0), fill=(0, 0, 0))
-
-    redacted_bytes = doc.tobytes(garbage=4, clean=True, deflate=True)
-    doc.close()
-    return redacted_bytes, "\n".join(all_text_parts)
+        grouped.setdefault(r["page"], []).append(mediabox_rect)
+    return grouped
 
 
-def _censor_text_from_page(
-    page: pymupdf.Page, rects: list[pymupdf.Rect]
-) -> str:
+def _redact_page(page: pymupdf.Page, rects: Iterable[pymupdf.Rect]) -> None:
+    rects = list(rects)
+    for rect in rects:
+        page.add_redact_annot(rect, fill=(0, 0, 0))
+    page.apply_redactions(
+        images=pymupdf.PDF_REDACT_IMAGE_NONE,
+        graphics=pymupdf.PDF_REDACT_LINE_ART_NONE,
+    )
+    # Paint over the same area: apply_redactions does not hide image content
+    # underneath, so this guarantees a visual black box on scanned pages too.
+    for rect in rects:
+        page.draw_rect(rect, color=(0, 0, 0), fill=(0, 0, 0))
+
+
+def _censor_page_text(page: pymupdf.Page, rects: list[pymupdf.Rect]) -> str:
     data = page.get_text("dict", flags=pymupdf.TEXTFLAGS_TEXT)
-    output_lines: list[str] = []
-
+    lines: list[str] = []
     for block in data.get("blocks", []):
-        if block.get("type") != 0:
+        if block.get("type") != 0:  # not text
             continue
         for line in block.get("lines", []):
             tokens: list[str] = []
@@ -90,6 +99,5 @@ def _censor_text_from_page(
                 else:
                     tokens.append(text)
             if tokens:
-                output_lines.append(" ".join(tokens))
-
-    return "\n".join(output_lines)
+                lines.append(" ".join(tokens))
+    return "\n".join(lines)

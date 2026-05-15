@@ -4,7 +4,15 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-3776ab.svg)](https://www.python.org/)
 [![Node](https://img.shields.io/badge/Node-18+-339933.svg)](https://nodejs.org/)
 
-Aplicación web para **redactar (censurar) a mano** información sensible en documentos PDF. Dibujas un rectángulo, aplicas, y el texto debajo se elimina realmente del PDF (no se tapa con una imagen). **Todo el procesamiento ocurre en tu equipo, sin enviar nada a Internet.**
+Aplicación web para **redactar (censurar) a mano** información sensible en
+documentos PDF. Dibujas un rectángulo, aplicas, y el texto debajo se elimina
+del flujo de contenidos del PDF — no se tapa con una imagen.
+
+**Todo el procesamiento ocurre en tu equipo. Nada sale a Internet.**
+
+> En inglés, *redact* es el verbo técnico que usan abogados y gobiernos para
+> referirse a eliminar partes confidenciales de un documento, normalmente
+> tapándolas con barras negras antes de publicarlo.
 
 ## Inicio rápido
 
@@ -17,14 +25,20 @@ cd pdf-privacy-tool/redactpdf
 run.bat            # Windows
 ```
 
-El primer arranque instala dependencias y compila el frontend (~1 min). Después abre el navegador en `http://127.0.0.1:8000` automáticamente.
+El primer arranque instala dependencias y compila el frontend (~1 min). Después
+abre el navegador en `http://127.0.0.1:8000` automáticamente.
 
 ## Uso
 
-1. Arrastra un PDF a la zona de subida.
-2. En el editor, dibuja rectángulos sobre la información que quieras eliminar (modo **Dibujar**).
-3. Para retirar un rectángulo, cambia a **Borrar** y haz clic encima.
-4. Pulsa **Aplicar cambios** y descarga el PDF resultante o el texto censurado.
+1. Arrastra un PDF a la zona de subida (también acepta clic).
+2. En el panel **Editor** (derecha), arrastra para crear un rectángulo negro
+   sobre la información sensible.
+3. Para retirar un rectángulo, cambia a modo **Borrar** y haz clic encima.
+4. Pulsa **Aplicar cambios** y descarga el PDF resultante o el texto
+   censurado en `.txt`.
+
+El panel **Original** (izquierda) muestra siempre el documento sin modificar
+como referencia.
 
 ### Atajos de teclado
 
@@ -35,35 +49,98 @@ El primer arranque instala dependencias y compila el frontend (~1 min). Después
 | Deshacer último rectángulo | `Ctrl+Z` |
 | Aplicar cambios | `Ctrl+Enter` |
 
+### Modo oscuro
+
+Botón sol/luna en el header. Persiste en `localStorage` y respeta
+`prefers-color-scheme` la primera vez.
+
 ## Cómo funciona
 
 ```
-Navegador (React + react-pdf)  ──►  FastAPI  ──►  PyMuPDF
-            │                                       │
-            │   rectángulos                         │ add_redact_annot
-            │   en coordenadas PDF                  │ apply_redactions
-            ▼                                       ▼
-       editor visual                          PDF con texto eliminado
+Navegador (React + pdf.js)  ──►  FastAPI  ──►  PyMuPDF
+            │                                    │
+            │   rectángulos en coords visibles   │  derotation_matrix
+            │   (pdf.js rotation-aware)          │  add_redact_annot
+            ▼                                    ▼  apply_redactions
+       editor visual                       PDF con texto eliminado
 ```
 
-PyMuPDF aplica `apply_redactions`, que **borra el texto y los gráficos** del flujo de contenidos del PDF — abrir el resultado en otro visor confirma que la información ya no se puede seleccionar ni copiar.
+`apply_redactions` borra el texto y los gráficos del flujo de contenidos del
+PDF — abrir el resultado en otro visor confirma que la información ya no se
+puede seleccionar ni copiar. Sobre PDFs escaneados (sin capa de texto) el
+rectángulo además se pinta encima para tapar el bitmap.
+
+### Coordenadas en PDFs rotados
+
+pdf.js renderiza los PDFs con `/Rotate ≠ 0` en su orientación visual, pero
+PyMuPDF coloca anotaciones en coordenadas de mediabox (sin rotar). El backend
+aplica `page.derotation_matrix` a cada rectángulo antes de añadir la
+anotación, de modo que un dibujo en la esquina superior izquierda del visor
+acaba donde el usuario lo ve, no en otra esquina del PDF original.
+
+## Limitaciones
+
+- **Sin OCR.** La exportación a TXT solo funciona en PDFs digitales (con capa
+  de texto). En PDFs escaneados la redacción visual se aplica correctamente
+  pero el botón TXT queda deshabilitado con un aviso en la UI.
+- **Sin detección automática.** No hay modelo de IA: el usuario decide qué
+  censurar. Es una decisión consciente del proyecto.
 
 ## Requisitos
 
 - Python ≥ 3.10
 - Node.js ≥ 18
-- [`uv`](https://docs.astral.sh/uv/) (gestor de paquetes Python)
-
-Sin Tesseract, sin GPU, sin descargas de modelos de varios GB.
+- [`uv`](https://docs.astral.sh/uv/)
 
 ## Desarrollo
 
 ```bash
-# Backend (puerto 8000)
+# Backend con autorecarga (puerto 8000)
 uv run uvicorn backend.main:app --reload --port 8000
 
 # Frontend con HMR (puerto 5173, proxy /api → 8000)
 cd frontend && npm install && npm run dev
+```
+
+Smoke test del backend:
+
+```bash
+uv run python tests/test_backend.py
+```
+
+Type-check del frontend:
+
+```bash
+cd frontend && npx tsc -b --noEmit
+```
+
+## Estructura
+
+```
+redactpdf/
+├── backend/
+│   ├── main.py         # FastAPI app + endpoints
+│   └── redactor.py     # apply_rects_to_pdf + helpers
+├── frontend/
+│   └── src/
+│       ├── App.tsx
+│       ├── api.ts
+│       ├── hooks/
+│       │   ├── useKeyboardShortcuts.ts
+│       │   └── useTheme.ts
+│       └── components/
+│           ├── AppHeader.tsx
+│           ├── DropZone.tsx
+│           ├── Editor.tsx
+│           ├── HelpDialog.tsx
+│           ├── PdfPanel.tsx
+│           ├── editor/         # Toolbar + Panes
+│           └── ui/             # Button, Badge, Dialog, Tooltip
+├── scripts/
+│   └── launcher.py     # Cross-platform launcher
+├── tests/
+│   └── test_backend.py # Smoke test
+└── run.bat / run.sh    # OS-specific shortcuts
 ```
 
 ## Stack
@@ -72,15 +149,18 @@ cd frontend && npm install && npm run dev
 |---|---|
 | Backend | FastAPI + Uvicorn |
 | PDF | PyMuPDF |
-| Frontend | React 19 + Vite + TypeScript + Tailwind |
+| Frontend | React 19 + Vite + TypeScript + Tailwind CSS |
 | Iconos | lucide-react |
-| Dependencias Python | uv |
+| Deps Python | uv |
 
 ## Licencias
 
 - **Este proyecto:** Apache 2.0 (ver [LICENSE](LICENSE)).
-- **PyMuPDF:** GNU AGPL v3. Para uso comercial en software propietario, adquirir [licencia comercial de Artifex](https://artifex.com/licensing/).
+- **PyMuPDF:** GNU AGPL v3. Para uso comercial en software propietario,
+  adquirir [licencia comercial de Artifex](https://artifex.com/licensing/).
 
 ## Contribuir
 
-Las contribuciones son bienvenidas. Abre un issue describiendo el cambio antes de un PR grande. Para PRs pequeños, ejecuta `uv run python test_backend.py` y `cd frontend && npx tsc -b --noEmit` antes de proponerlos.
+Las contribuciones son bienvenidas. Abre un issue antes de un PR grande. Para
+PRs pequeños, ejecuta `uv run python tests/test_backend.py` y
+`cd frontend && npx tsc -b --noEmit` antes de proponerlos.
