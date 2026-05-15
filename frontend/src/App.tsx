@@ -37,10 +37,10 @@ export default function App() {
     setError("");
     try {
       const applied = await applyRedactions(base64, rects);
-      // Reemplazamos el PDF en pantalla por el redactado, dejándolo listo
-      // para nuevas zonas si el usuario quiere iterar.
-      setBase64(applied.pdf_base64);
-      setRects([]);
+      // Mantenemos el base64 original para que el panel izquierdo siempre
+      // muestre el documento sin modificar. Los rectángulos siguen ahí
+      // para que se vean en el panel derecho como "vista previa de la
+      // censura"; el PDF redactado real queda en appliedResult para descarga.
       setAppliedResult(applied);
       setDirty(false);
     } catch (e) {

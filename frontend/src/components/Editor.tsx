@@ -4,6 +4,7 @@ import {
   Eraser,
   FileDown,
   FilePlus,
+  Info,
   Loader2,
   Pencil,
   RotateCcw,
@@ -61,6 +62,7 @@ export default function Editor({
   const canApply = hasFile && dirty && !applying;
   const baseName = fileName.replace(/\.pdf$/i, "") || "documento";
   const hasText = !!appliedResult && appliedResult.text.trim().length > 0;
+  const isScanned = !!appliedResult && !hasText;
 
   function jumpToPage() {
     if (!totalPages) return;
@@ -245,7 +247,7 @@ export default function Editor({
                       content={
                         hasText
                           ? "Descargar texto censurado"
-                          : "Este PDF no contiene texto extraíble"
+                          : "El PDF no tiene capa de texto (es una imagen escaneada). El TXT solo se genera para PDFs digitales."
                       }
                     >
                       <Button
@@ -275,27 +277,99 @@ export default function Editor({
             </Button>
           </div>
         </div>
+        {isScanned && (
+          <div className="border-t border-amber-200 bg-amber-50">
+            <div className="mx-auto flex max-w-screen-2xl items-start gap-2 px-6 py-2 text-xs text-amber-900">
+              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span>
+                Este PDF es una imagen escaneada (sin capa de texto). La redacción
+                visual se aplica correctamente, pero la exportación a TXT no está
+                disponible.
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-auto bg-slate-100">
-        <div className="mx-auto h-full max-w-5xl px-6 py-6">
-          {hasFile ? (
-            <PdfPanel
-              base64={base64}
-              onDocLoad={setTotalPages}
-              scrollToPage={scrollTargetPage}
-              scrollToken={scrollToken}
-              drawMode={mode === "draw"}
-              removeMode={mode === "erase"}
-              rects={rects}
-              onRectDrawn={onAddRect}
-              onRectClick={onRemoveRect}
-            />
-          ) : (
-            <DropZone onFileSelected={onFileSelected} />
-          )}
-        </div>
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {hasFile ? (
+          <div className="mx-auto grid h-full max-w-screen-2xl grid-cols-1 gap-4 px-4 py-4 lg:grid-cols-2 min-h-0">
+            <Pane title="Original">
+              <PdfPanel
+                base64={base64}
+                onDocLoad={setTotalPages}
+                scrollToPage={scrollTargetPage}
+                scrollToken={scrollToken}
+                drawMode={false}
+                removeMode={false}
+                rects={[]}
+              />
+            </Pane>
+            <Pane
+              title="Redactado"
+              detail={
+                mode === "draw"
+                  ? "Arrastra para dibujar"
+                  : "Clic en una zona para borrar"
+              }
+              tone={mode === "draw" ? "danger" : "warning"}
+            >
+              <PdfPanel
+                base64={base64}
+                scrollToPage={scrollTargetPage}
+                scrollToken={scrollToken}
+                drawMode={mode === "draw"}
+                removeMode={mode === "erase"}
+                rects={rects}
+                onRectDrawn={onAddRect}
+                onRectClick={onRemoveRect}
+              />
+            </Pane>
+          </div>
+        ) : (
+          <div className="h-full overflow-auto bg-slate-100">
+            <div className="mx-auto h-full max-w-5xl px-6 py-6">
+              <DropZone onFileSelected={onFileSelected} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+function Pane({
+  title,
+  detail,
+  tone = "neutral",
+  children,
+}: {
+  title: string;
+  detail?: string;
+  tone?: "neutral" | "danger" | "warning";
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <header className="flex h-10 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          {title}
+        </h3>
+        {detail && (
+          <Badge
+            tone={
+              tone === "danger"
+                ? "danger"
+                : tone === "warning"
+                  ? "warning"
+                  : "neutral"
+            }
+          >
+            {detail}
+          </Badge>
+        )}
+      </header>
+      <div className="flex-1 overflow-auto bg-slate-100 p-4">{children}</div>
+    </section>
   );
 }
