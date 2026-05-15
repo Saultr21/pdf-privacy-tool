@@ -41,33 +41,35 @@ export function Dialog({
         type="button"
         aria-label="Cerrar"
         onClick={onClose}
-        className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm dark:bg-slate-950/70"
       />
       <div
         className={cn(
-          "relative w-full max-w-md rounded-2xl bg-white shadow-card",
+          "relative w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-card dark:border-slate-800 dark:bg-slate-900",
           className,
         )}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5 dark:border-slate-800">
           <div>
-            <h2 className="text-base font-semibold tracking-tight text-slate-950">
+            <h2 className="text-base font-semibold tracking-tight text-slate-950 dark:text-slate-100">
               {title}
             </h2>
             {description && (
-              <p className="mt-1 text-sm text-slate-600">{description}</p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                {description}
+              </p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Cerrar diálogo"
-            className="rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
+            className="rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:focus-visible:ring-slate-200"
           >
             <X className="h-4 w-4" aria-hidden />
           </button>
         </div>
-        <div className="px-6 py-5">{children}</div>
+        <div className="px-6 py-5 text-slate-700 dark:text-slate-300">{children}</div>
       </div>
     </div>
   );

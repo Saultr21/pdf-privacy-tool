@@ -11,7 +11,7 @@ from .schemas import RedactSettings
 
 MAX_PDF_BYTES = 100 * 1024 * 1024
 
-app = FastAPI(title="PII Redactor", version="0.2.0")
+app = FastAPI(title="RedactPDF", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,

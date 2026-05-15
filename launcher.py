@@ -1,4 +1,4 @@
-"""Cross-platform launcher for Redact PII.
+"""Cross-platform launcher for RedactPDF.
 
 Usage:
     uv run python launcher.py            # default port 8000
@@ -29,11 +29,11 @@ DIST = FRONTEND / "dist"
 
 
 def log(msg: str) -> None:
-    print(f"\033[36m[redactpii]\033[0m {msg}", flush=True)
+    print(f"\033[36m[redactpdf]\033[0m {msg}", flush=True)
 
 
 def err(msg: str) -> None:
-    print(f"\033[31m[redactpii]\033[0m {msg}", file=sys.stderr, flush=True)
+    print(f"\033[31m[redactpdf]\033[0m {msg}", file=sys.stderr, flush=True)
 
 
 def have(cmd: str) -> bool:
@@ -70,7 +70,7 @@ def wait_and_open(url: str, timeout: float = 30.0) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Lanzador de Redact PII")
+    parser = argparse.ArgumentParser(description="Lanzador de RedactPDF")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument(
         "--no-browser", action="store_true", help="No abrir el navegador"

@@ -4,7 +4,7 @@ cd /d "%~dp0"
 
 where uv >nul 2>&1
 if errorlevel 1 (
-    echo [redactpii] No se encontro "uv". Instala uv desde https://docs.astral.sh/uv/
+    echo [redactpdf] No se encontro "uv". Instala uv desde https://docs.astral.sh/uv/
     echo            o ejecuta: powershell -c "irm https://astral.sh/uv/install.ps1 ^| iex"
     pause
     exit /b 1

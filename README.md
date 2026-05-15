@@ -1,10 +1,10 @@
-# Redact PII
+# RedactPDF
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776ab.svg)](https://www.python.org/)
 [![Node](https://img.shields.io/badge/Node-18+-339933.svg)](https://nodejs.org/)
 
-Aplicación web para **censurar a mano** información sensible en documentos PDF. Dibujas un rectángulo, aplicas, y el texto debajo se elimina realmente del PDF (no se tapa con una imagen). **Todo el procesamiento ocurre en tu equipo, sin enviar nada a Internet.**
+Aplicación web para **redactar (censurar) a mano** información sensible en documentos PDF. Dibujas un rectángulo, aplicas, y el texto debajo se elimina realmente del PDF (no se tapa con una imagen). **Todo el procesamiento ocurre en tu equipo, sin enviar nada a Internet.**
 
 ## Inicio rápido
 
@@ -12,7 +12,7 @@ Necesitas [`uv`](https://docs.astral.sh/uv/) y [Node.js 18+](https://nodejs.org/
 
 ```bash
 git clone https://github.com/Saultr21/pdf-privacy-tool.git
-cd pdf-privacy-tool/redactpii
+cd pdf-privacy-tool/redactpdf
 ./run.sh           # macOS / Linux
 run.bat            # Windows
 ```

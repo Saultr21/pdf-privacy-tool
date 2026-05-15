@@ -22,10 +22,10 @@ export default function HelpDialog({ open, onClose }: Props) {
     <Dialog
       open={open}
       onClose={onClose}
-      title="Cómo usar Redact PII"
-      description="Tres pasos sencillos para censurar tus PDFs sin que nada salga de tu equipo."
+      title="Cómo usar RedactPDF"
+      description="Tres pasos para censurar tus PDFs sin que nada salga de tu equipo."
     >
-      <ol className="space-y-3 text-sm text-slate-700">
+      <ol className="space-y-3 text-sm">
         <Step n={1} title="Sube un PDF">
           Arrastra el archivo o pulsa la zona de subida. Hasta 100 MB.
         </Step>
@@ -39,22 +39,24 @@ export default function HelpDialog({ open, onClose }: Props) {
         </Step>
       </ol>
 
-      <div className="mt-6 border-t border-slate-200 pt-5">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+      <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           Atajos de teclado
         </h3>
         <dl className="mt-3 grid grid-cols-1 gap-2">
           {rows.map((r) => (
             <div
               key={r.action}
-              className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2"
+              className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 dark:bg-slate-800"
             >
-              <dt className="text-sm text-slate-700">{r.action}</dt>
+              <dt className="text-sm text-slate-700 dark:text-slate-300">
+                {r.action}
+              </dt>
               <dd className="flex items-center gap-1">
                 {r.keys.map((k) => (
                   <kbd
                     key={k}
-                    className="rounded border border-slate-300 bg-white px-2 py-0.5 text-[11px] font-mono font-semibold text-slate-700 shadow-sm"
+                    className="rounded border border-slate-300 bg-white px-2 py-0.5 text-[11px] font-mono font-semibold text-slate-700 shadow-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                   >
                     {k}
                   </kbd>
@@ -79,12 +81,14 @@ function Step({
 }) {
   return (
     <li className="flex gap-3">
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-bold text-white">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-bold text-white dark:bg-white dark:text-slate-950">
         {n}
       </span>
       <div>
-        <p className="font-semibold text-slate-900">{title}</p>
-        <p className="text-sm text-slate-600">{children}</p>
+        <p className="font-semibold text-slate-900 dark:text-slate-100">
+          {title}
+        </p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{children}</p>
       </div>
     </li>
   );

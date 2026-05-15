@@ -81,7 +81,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-slate-900">
+    <div className="flex h-screen flex-col overflow-hidden text-slate-900 dark:text-slate-100">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-50 focus:rounded-md focus:bg-slate-950 focus:px-3 focus:py-2 focus:text-sm focus:text-white"
@@ -111,9 +111,9 @@ export default function App() {
           role="alert"
           className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2"
         >
-          <div className="pointer-events-auto flex items-center gap-3 rounded-lg border border-red-200 bg-white px-4 py-3 shadow-lg">
-            <AlertCircle className="h-5 w-5 text-red-600" aria-hidden />
-            <span className="text-sm font-medium text-red-800">{error}</span>
+          <div className="pointer-events-auto flex items-center gap-3 rounded-lg border border-red-200 bg-white px-4 py-3 shadow-lg dark:border-red-900 dark:bg-slate-900">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden />
+            <span className="text-sm font-medium text-red-800 dark:text-red-300">{error}</span>
             <Button variant="ghost" size="sm" onClick={() => setError("")}>
               Cerrar
             </Button>
