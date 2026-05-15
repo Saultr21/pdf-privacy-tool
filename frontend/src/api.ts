@@ -19,14 +19,20 @@ export function makeRectId(): string {
 }
 
 export function fileToBase64(file: File): Promise<string> {
-  return file.arrayBuffer().then((buf) => {
-    const bytes = new Uint8Array(buf);
-    let binary = "";
-    const chunk = 0x8000;
-    for (let i = 0; i < bytes.length; i += chunk) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-    }
-    return btoa(binary);
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        reject(new Error("Resultado inesperado al leer el archivo"));
+        return;
+      }
+      const idx = result.indexOf(",");
+      resolve(idx >= 0 ? result.slice(idx + 1) : result);
+    };
+    reader.onerror = () =>
+      reject(reader.error ?? new Error("No se pudo leer el archivo"));
+    reader.readAsDataURL(file);
   });
 }
 
