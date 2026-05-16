@@ -37,7 +37,7 @@ export default function DropZone({ onFileSelected }: Props) {
           procesado local
         </span>
         <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl dark:text-slate-100">
-          Censura PII en tus PDFs
+          Censura tus PDFs
           <br />
           <span className="text-slate-500 dark:text-slate-400">
             de forma manual y privada.

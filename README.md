@@ -91,7 +91,7 @@ acaba donde el usuario lo ve, no en otra esquina del PDF original.
   de texto). En PDFs escaneados la redacción visual se aplica correctamente
   pero el botón TXT queda deshabilitado con un aviso en la UI.
 - **Sin detección automática.** No hay modelo de IA: el usuario decide qué
-  censurar. Es una decisión consciente del proyecto.
+  censurar. 
 
 ## Requisitos
 
@@ -170,6 +170,4 @@ redactpdf/
 
 ## Contribuir
 
-Las contribuciones son bienvenidas. Abre un issue antes de un PR grande. Para
-PRs pequeños, ejecuta `uv run python tests/test_backend.py` y
-`cd frontend && npx tsc -b --noEmit` antes de proponerlos.
+Las contribuciones son bienvenidas. 
