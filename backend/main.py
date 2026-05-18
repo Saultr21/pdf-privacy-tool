@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 import base64
+import mimetypes
 from pathlib import Path
+
+mimetypes.add_type("application/javascript", ".js")
+mimetypes.add_type("application/javascript", ".mjs")
+mimetypes.add_type("application/wasm", ".wasm")
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
