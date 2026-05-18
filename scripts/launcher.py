@@ -43,15 +43,16 @@ def have(cmd: str) -> bool:
 def ensure_frontend_build() -> None:
     if DIST.exists() and any(DIST.iterdir()):
         return
-    if not have("npm"):
+    npm = shutil.which("npm")
+    if not npm:
         err(
             "Node.js / npm no encontrado. Instálalo desde https://nodejs.org "
             "para poder construir la interfaz."
         )
         sys.exit(1)
     log("Compilando la interfaz (primer arranque, puede tardar un minuto)…")
-    subprocess.check_call(["npm", "install"], cwd=FRONTEND, shell=False)
-    subprocess.check_call(["npm", "run", "build"], cwd=FRONTEND, shell=False)
+    subprocess.check_call([npm, "install"], cwd=FRONTEND, shell=False)
+    subprocess.check_call([npm, "run", "build"], cwd=FRONTEND, shell=False)
 
 
 def wait_and_open(url: str, timeout: float = 30.0) -> None:
